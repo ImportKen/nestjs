@@ -1,0 +1,455 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "EPPO Energy Data API",
+    "description": "API สำหรับข้อมูลพลังงานจาก EPPO (Energy Policy and Planning Office) ได้แก่ อัตราการเติบโตการใช้ไฟฟ้า, การวิเคราะห์ Peak Demand/Load Factor, และข้อมูลการปล่อย CO2 เทียบกับ GDP",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Default server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Root",
+      "description": "Root endpoint"
+    },
+    {
+      "name": "Growth Rate",
+      "description": "อัตราการเติบโตของการใช้ไฟฟ้าต่อหัวประชากร (Electricity Consumption per Capita Growth Rate)"
+    },
+    {
+      "name": "Energy Analysis",
+      "description": "ข้อมูล Peak Demand และ Load Factor รายปี/รายเดือน"
+    },
+    {
+      "name": "Emission Intensity",
+      "description": "ข้อมูลการปล่อย CO2 เทียบกับ GDP (Emission Intensity to GDP) และ Clean Energy Index ตามประเภทเชื้อเพลิง "
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "Root"
+        ],
+        "summary": "Root endpoint",
+        "description": "จุดเริ่มต้นของ API",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": ""
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/eppo/gr": {
+      "get": {
+        "tags": [
+          "Growth Rate"
+        ],
+        "summary": "ดึงข้อมูลอัตราการเติบโตของการใช้ไฟฟ้าต่อหัวประชากรตามช่วงปี",
+        "description": "รับพารามิเตอร์ปีเริ่มต้นและปีสิ้นสุด (year-year) เพื่อคำนวณ Growth Rate ของ ElectricityConsumption_capita",
+        "parameters": [
+          {
+            "name": "startYear",
+            "in": "query",
+            "required": true,
+            "description": "ปีเริ่มต้น",
+            "schema": {
+              "type": "integer",
+              "example": 2015
+            }
+          },
+          {
+            "name": "endYear",
+            "in": "query",
+            "required": true,
+            "description": "ปีสิ้นสุด",
+            "schema": {
+              "type": "integer",
+              "example": 2020
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ElectricityConsumption_capita"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "start and end invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "year not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/eppo/ea": {
+      "get": {
+        "tags": [
+          "Energy Analysis"
+        ],
+        "summary": "ดึงข้อมูล Peak Demand และ Load Factor ตามปีและเดือนที่ระบุ (filter ด้วย query)",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "description": "ปีที่ต้องการข้อมูล",
+            "schema": {
+              "type": "integer",
+              "example": 2023
+            }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": false,
+            "description": "เดือนที่ต้องการข้อมูลของทุกปี (เช่น January, February, ...)",
+            "schema": {
+              "type": "string",
+              "example": "January"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "year": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "month": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "peak": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "generate": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "load": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "year or month invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "year or month not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/eppo/emgdp": {
+      "get": {
+        "tags": [
+          "Emission Intensity"
+        ],
+        "summary": "ดึงข้อมูลการปล่อย CO2 ต่อ GDP ตามช่วงปี",
+        "description": "รับพารามิเตอร์ปีเริ่มต้นและปีสิ้นสุด (year-year) เพื่อเปรียบเทียบค่า CO2_per_GDP",
+        "parameters": [
+          {
+            "name": "startYear",
+            "in": "query",
+            "required": true,
+            "description": "ปีเริ่มต้น",
+            "schema": {
+              "type": "integer",
+              "example": 2015
+            }
+          },
+          {
+            "name": "endYear",
+            "in": "query",
+            "required": true,
+            "description": "ปีสิ้นสุด",
+            "schema": {
+              "type": "integer",
+              "example": 2020
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "start": {
+                      "type": "integer"
+                    },
+                    "end": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EMGDP"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "start and end invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "year not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/eppo/emet": {
+      "get": {
+        "tags": [
+          "Emission Intensity"
+        ],
+        "summary": "ดึงข้อมูลการปล่อย CO2 ในการผลิดไฟฟ้าแยกประเภทตามเชื้อเพลิง",
+        "description": "รับพารามิเตอร์ปีเริ่มต้นและปีสิ้นสุด (year-year) เพื่อเปรียบเทียบค่า Total สำหรับคำนวณ Clean Energy Index",
+        "parameters": [
+          {
+            "name": "startYear",
+            "in": "query",
+            "required": true,
+            "description": "ปีเริ่มต้น",
+            "schema": {
+              "type": "integer",
+              "example": 2015
+            }
+          },
+          {
+            "name": "endYear",
+            "in": "query",
+            "required": true,
+            "description": "ปีสิ้นสุด",
+            "schema": {
+              "type": "integer",
+              "example": 2020
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "year-start": {
+                      "type": "string"
+                    },
+                    "year-end": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EMET"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "start and end invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "year not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "eccs": {
+        "type": "object",
+        "properties": {
+          "Year": {
+            "type": "number"
+          },
+          "ElectricityConsumption": {
+            "type": "number"
+          },
+          "ElectricityConsumption_capita": {
+            "type": "number"
+          },
+          "Population": {
+            "type": "number"
+          }
+        }
+      },
+      "pdcs": {
+        "type": "object",
+        "properties": {
+          "Year": {
+            "type": "number"
+          },
+          "Month": {
+            "type": "string"
+          },
+          "peak": {
+            "type": "number"
+          },
+          "generation": {
+            "type": "number"
+          },
+          "loadFactory": {
+            "type": "number"
+          }
+        }
+      },
+      "emets": {
+        "type": "object",
+        "properties": {
+          "Year": {
+            "type": "number"
+          },
+          "Oil": {
+            "type": "number"
+          },
+          "Coal/Lignite": {
+            "type": "number"
+          },
+          "Natural Gas": {
+            "type": "number"
+          },
+          "Total": {
+            "type": "number"
+          }
+        }
+      },
+      "emgdps": {
+        "type": "object",
+        "properties": {
+          "Year": {
+            "type": "number"
+          },
+          "CO2_Emission": {
+            "type": "number"
+          },
+          "GDP_CVM": {
+            "type": "number"
+          },
+          "CO2_per_GDP": {
+            "type": "number"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
